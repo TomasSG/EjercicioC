@@ -37,24 +37,17 @@ int main(int argc, char *argv[]){
 		printf("Solicitud rechazada\n");
 		return ERROR;	
 	}
-
 	printf("CONEXION REALIZADA\n");
-	for(i = 0; i < 2; i++){
+	while(1)
+	{
 		bzero(buffer,256);
 		recv(x,buffer,256,0);
 		printf("%s\n",buffer);
-		
+		bzero(buffer,256);
+		printf("Ingrese el dato que quiere escribir\n");
 		scanf("%s",buffer);
-		send(x,buffer,strlen(buffer),0);
-			
-		bzero(buffer,256);
-		recv(x,buffer,256,0);
-		printf("%s\n",buffer);
+		send(x,(void*)buffer,strlen(buffer),0);	
 	}
-
-	bzero(buffer,256);
-	recv(x,buffer,256,0);
-	printf("%s\n",buffer);
-	close(x);
+	//close(x);
 	return TODO_BIEN;
 }
