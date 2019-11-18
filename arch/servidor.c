@@ -9,32 +9,65 @@
 #include <pthread.h>
 
 #include "../lib/lista.h"
+#include "../lib/cola.h"
 
 #define ERROR -1
 #define OK 1
 #define MAX_QUEUE 999
 
 t_lista clientes;
+t_cola peticiones;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
 void* escuchar_cliente(void*);
+void* atender_peticiones(void *);
 
 void* escuchar_cliente(void* socket)
 {
 	int* paux= (int*) socket;	
 	int socket_cliente=*paux;
-	char buffer[256];
+	char buffer [256];
+	t_dato_c aux;
+	char* enviar = "Esto es una prueba de mutex";
+	send(socket_cliente,(void*)enviar,strlen(enviar),0);
 	while(1)
 	{
 		bzero(buffer,256);
-		char* enviar = "Esto es una prueba de mutex";
+		enviar="Escriba su peticion";
 		send(socket_cliente,(void*)enviar,strlen(enviar),0);
-		pthread_mutex_lock(&mtx);
 		recv(socket_cliente,buffer,256,0);
-		printf("%s\n",buffer);
+		strcpy(aux.buffer, buffer);
+		pthread_mutex_lock(&mtx);
+		if(!cola_llena(&peticiones))
+		{
+			acolar(&peticiones,&aux);
+		}
 		pthread_mutex_unlock(&mtx);
 	}
 
+}
+
+void* atender_peticiones(void* valor)
+{
+	int i=0;
+	t_dato_c aux;	
+	pthread_mutex_lock(&mtx);	
+	crear_cola(&peticiones);
+	pthread_mutex_unlock(&mtx);
+	while(1)
+	{
+		for(i=0;i < 100;i++)
+		{
+		}
+		pthread_mutex_lock(&mtx);	
+		if(!cola_vacia(&peticiones))
+		{
+			desacolar(&peticiones,&aux);
+			printf("%s\n",aux.buffer);			
+		}
+		pthread_mutex_unlock(&mtx);
+	}
+	
 }
 
 int main (int argc, char *argv[])
@@ -45,6 +78,8 @@ int main (int argc, char *argv[])
 	int servidor_socket;
 	int habilitar = 1;
 	int resultado=0;
+	pthread_t hilo_peticiones;
+	
 	
 	if( argc < 2)
 	{
@@ -76,6 +111,9 @@ int main (int argc, char *argv[])
 	crear_lista(&clientes);
 
 	listen(servidor_socket,MAX_QUEUE);
+
+	pthread_create(&hilo_peticiones,NULL,atender_peticiones,NULL);
+	
 	while(1)
 	{		
 		t_dato dato; 
@@ -88,6 +126,7 @@ int main (int argc, char *argv[])
 			
 	}
 	
+	pthread_join(hilo_peticiones,NULL);
 	//close(cliente_socket);
 	//close(servidor_socket);
 

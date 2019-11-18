@@ -1,4 +1,4 @@
-#include "cola_dinamica.h"
+#include "cola.h"
 
 void crear_cola (t_cola * cola)
 {
@@ -14,15 +14,15 @@ int cola_vacia (const t_cola* cola)
 int cola_llena (const t_cola* cola)
 {
     void * aux;
-    aux = malloc(sizeof(t_nodo));
+    aux = malloc(sizeof(t_nodo_c));
     free (aux);
     return aux== NULL;
 }
 
-int acolar (t_cola* cola ,const t_dato* dato )
+int acolar (t_cola* cola ,const t_dato_c* dato )
 {
-    t_nodo* nuevo;
-    nuevo=(t_nodo*)malloc(sizeof(t_nodo));
+    t_nodo_c* nuevo;
+    nuevo=(t_nodo_c*)malloc(sizeof(t_nodo_c));
     if(!nuevo)
         return COLA_LLENA;
     if(cola->ppri)
@@ -35,9 +35,9 @@ int acolar (t_cola* cola ,const t_dato* dato )
     return TODO_BIEN;
 }
 
-int desacolar(t_cola* cola ,t_dato* dato )
+int desacolar(t_cola* cola ,t_dato_c* dato )
 {
-    t_nodo* aux;
+    t_nodo_c* aux;
     if (!cola->ppri)
             return COLA_VACIA;
     aux = cola->ppri;
@@ -49,7 +49,7 @@ int desacolar(t_cola* cola ,t_dato* dato )
     return TODO_BIEN;
 }
 
-int ver_primero (const t_cola *cola,t_dato *dato)
+int ver_primero (const t_cola *cola,t_dato_c *dato)
 {
     if(!cola->ppri)
         return COLA_VACIA;
@@ -59,7 +59,7 @@ int ver_primero (const t_cola *cola,t_dato *dato)
 
 void vaciar_cola (t_cola *cola)
 {
-    t_nodo *aux;
+    t_nodo_c *aux;
     while (cola->ppri)
     {
         aux=cola->ppri;

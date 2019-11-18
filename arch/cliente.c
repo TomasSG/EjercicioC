@@ -44,7 +44,6 @@ int main(int argc, char *argv[]){
 		recv(x,buffer,256,0);
 		printf("%s\n",buffer);
 		bzero(buffer,256);
-		printf("Ingrese el dato que quiere escribir\n");
 		scanf("%s",buffer);
 		send(x,(void*)buffer,strlen(buffer),0);	
 	}

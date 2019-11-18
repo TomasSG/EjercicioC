@@ -5,26 +5,29 @@
 #define COLA_LLENA 0
 #define COLA_VACIA 0
 #define TODO_BIEN 1
-typedef char* t_dato;
-typedef struct s_nodo
+typedef struct
 {
-    t_dato dato;
-    struct s_nodo *psig;
-}t_nodo;
+	char buffer [256] ;
+} t_dato_c;
+typedef struct s_nodo_c
+{
+    t_dato_c dato;
+    struct s_nodo_c *psig;
+} t_nodo_c;
 
 typedef struct
 {
-    t_nodo *ppri;
-    t_nodo *pult;
+    t_nodo_c *ppri;
+    t_nodo_c *pult;
 
 } t_cola;
 
 void crear_cola (t_cola *);
 int cola_vacia (const t_cola*);
 int cola_llena (const t_cola*);
-int acolar (t_cola*,const t_dato*);
-int desacolar (t_cola*,t_dato*);
-int ver_primero (const t_cola*,t_dato*);
+int acolar (t_cola*,const t_dato_c*);
+int desacolar (t_cola*,t_dato_c*);
+int ver_primero (const t_cola*,t_dato_c*);
 void vaciar_cola (t_cola*);
 
 
