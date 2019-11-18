@@ -4,9 +4,11 @@
 #include <string.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "../lib/lista.h"
 #include "../lib/cola.h"
@@ -14,15 +16,44 @@
 #define ERROR -1
 #define OK 1
 #define MAX_QUEUE 999
-#define MAX_THREADS 999
+
 
 t_lista clientes;
 t_cola peticiones;
+pid_t pid_server;
+int servidor_socket;
+t_dato matar;
+pthread_t hilo_peticiones;
 pthread_mutex_t mtx_cola = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_lista = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mtx_matar = PTHREAD_MUTEX_INITIALIZER;
 
 void* escuchar_cliente(void*);
 void* atender_peticiones(void *);
+void terminar(int);
+void matar_hilo(int);
+
+void matar_hilo (int signal)
+{
+		
+	pthread_mutex_lock(&mtx_matar);			
+	pthread_mutex_lock(&mtx_lista);
+	borrar_aparicion(&clientes,&matar,comparacion);
+	pthread_mutex_unlock(&mtx_lista);
+	close(matar.socket);
+	printf("------------------------------------------\n");
+	printf("Se ha borrado con exito el cliente nro %d\n",matar.socket);
+	printf("------------------------------------------\n");
+	pthread_join(matar.hilo,NULL);
+	pthread_mutex_unlock(&mtx_matar);
+	return;
+}
+void terminar (int signal)
+{
+	
+	pthread_join(hilo_peticiones,NULL);
+	close(servidor_socket);
+}
 
 void* escuchar_cliente(void* socket)
 {
@@ -39,16 +70,11 @@ void* escuchar_cliente(void* socket)
 		recv(socket_cliente,buffer,256,0);
 		if( strcmp(buffer,"QUIT")==0)
 		{
-			t_dato borrar;
-			borrar.socket=socket_cliente;
-			borrar.hilo=pthread_self();
-			pthread_mutex_lock(&mtx_lista);
-			borrar_aparicion(&clientes,&borrar,comparacion);
-			pthread_mutex_unlock(&mtx_lista);
-			close(socket_cliente);
-			printf("------------------------------------------\n");
-			printf("Se ha borrado con exito el cliente nro %d\n",socket_cliente);
-			printf("------------------------------------------\n");
+			pthread_mutex_lock(&mtx_matar);			
+			matar.socket=socket_cliente;
+			matar.hilo=pthread_self();
+			kill(pid_server,SIGUSR1);
+			pthread_mutex_unlock(&mtx_matar);
 			pthread_exit(0);
 			return 0;
 		}
@@ -91,13 +117,10 @@ int main (int argc, char *argv[])
 	socklen_t cl=sizeof(struct sockaddr_in);
 	struct sockaddr_in sa;
 	struct sockaddr_in ca;
-	int servidor_socket;
 	int habilitar = 1;
 	int resultado=0;
 	int i=0;
-	pthread_t hilos[MAX_THREADS];
-	pthread_t hilo_peticiones;
-	
+	pid_server=getpid();
 	
 	if( argc < 2)
 	{
@@ -131,8 +154,9 @@ int main (int argc, char *argv[])
 	listen(servidor_socket,MAX_QUEUE);
 
 	pthread_create(&hilo_peticiones,NULL,atender_peticiones,NULL);
-	
-	for(i=0;i<MAX_THREADS;i++)
+	signal(SIGUSR1,matar_hilo); // comportamiento para que cuando un hilo finalice, se cierre el socket y se haga join al hilo
+	signal(SIGINT,terminar); // comportamiento para que cuando se haga ctrl + c en el servidor se cierren todos los socket, se maten los hilos y finalice el proceso
+	while(1)
 	{		
 		t_dato dato; 
 		dato.socket= accept(servidor_socket,(struct sockaddr *) &ca, &cl);
@@ -140,19 +164,12 @@ int main (int argc, char *argv[])
 		pthread_mutex_lock(&mtx_lista);
 		insertar_ordenado(&clientes,&dato,comparacion);		
 		pthread_mutex_unlock(&mtx_lista);
-		hilos[i]=dato.hilo;
 		printf("------------------------------------------\n");
 		printf("Clientes actuales:\n");	
-		printf("------------------------------------------\n");	
 		recorrer_lista(&clientes,mostrar);	
+		printf("------------------------------------------\n");	
 			
 	}
-	for(i=0;i<MAX_THREADS;i++)
-	{
-		pthread_join(hilos[i],NULL);
-	}
-	pthread_join(hilo_peticiones,NULL);
-	close(servidor_socket);
 	return OK;
 }
 
