@@ -14,10 +14,12 @@
 #define ERROR -1
 #define OK 1
 #define MAX_QUEUE 999
+#define MAX_THREADS 999
 
 t_lista clientes;
 t_cola peticiones;
-pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mtx_cola = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mtx_lista = PTHREAD_MUTEX_INITIALIZER;
 
 void* escuchar_cliente(void*);
 void* atender_peticiones(void *);
@@ -28,21 +30,35 @@ void* escuchar_cliente(void* socket)
 	int socket_cliente=*paux;
 	char buffer [256];
 	t_dato_c aux;
-	char* enviar = "Esto es una prueba de mutex";
-	send(socket_cliente,(void*)enviar,strlen(enviar),0);
+	char* enviar;
 	while(1)
 	{
 		bzero(buffer,256);
-		enviar="Escriba su peticion";
+		enviar="Escriba su peticion\n";
 		send(socket_cliente,(void*)enviar,strlen(enviar),0);
 		recv(socket_cliente,buffer,256,0);
+		if( strcmp(buffer,"QUIT")==0)
+		{
+			t_dato borrar;
+			borrar.socket=socket_cliente;
+			borrar.hilo=pthread_self();
+			pthread_mutex_lock(&mtx_lista);
+			borrar_aparicion(&clientes,&borrar,comparacion);
+			pthread_mutex_unlock(&mtx_lista);
+			close(socket_cliente);
+			printf("------------------------------------------\n");
+			printf("Se ha borrado con exito el cliente nro %d\n",socket_cliente);
+			printf("------------------------------------------\n");
+			pthread_exit(0);
+			return 0;
+		}
 		strcpy(aux.buffer, buffer);
-		pthread_mutex_lock(&mtx);
+		pthread_mutex_lock(&mtx_cola);
 		if(!cola_llena(&peticiones))
 		{
 			acolar(&peticiones,&aux);
 		}
-		pthread_mutex_unlock(&mtx);
+		pthread_mutex_unlock(&mtx_cola);
 	}
 
 }
@@ -51,21 +67,21 @@ void* atender_peticiones(void* valor)
 {
 	int i=0;
 	t_dato_c aux;	
-	pthread_mutex_lock(&mtx);	
+	pthread_mutex_lock(&mtx_cola);	
 	crear_cola(&peticiones);
-	pthread_mutex_unlock(&mtx);
+	pthread_mutex_unlock(&mtx_cola);
 	while(1)
 	{
 		for(i=0;i < 100;i++)
 		{
 		}
-		pthread_mutex_lock(&mtx);	
+		pthread_mutex_lock(&mtx_cola);	
 		if(!cola_vacia(&peticiones))
 		{
 			desacolar(&peticiones,&aux);
 			printf("%s\n",aux.buffer);			
 		}
-		pthread_mutex_unlock(&mtx);
+		pthread_mutex_unlock(&mtx_cola);
 	}
 	
 }
@@ -78,6 +94,8 @@ int main (int argc, char *argv[])
 	int servidor_socket;
 	int habilitar = 1;
 	int resultado=0;
+	int i=0;
+	pthread_t hilos[MAX_THREADS];
 	pthread_t hilo_peticiones;
 	
 	
@@ -114,22 +132,27 @@ int main (int argc, char *argv[])
 
 	pthread_create(&hilo_peticiones,NULL,atender_peticiones,NULL);
 	
-	while(1)
+	for(i=0;i<MAX_THREADS;i++)
 	{		
 		t_dato dato; 
 		dato.socket= accept(servidor_socket,(struct sockaddr *) &ca, &cl);
 		pthread_create(&dato.hilo,NULL,escuchar_cliente,(void *)&dato.socket);
+		pthread_mutex_lock(&mtx_lista);
 		insertar_ordenado(&clientes,&dato,comparacion);		
-		printf("Conexión esablecida con el cliente %d\n",dato.socket);
-		printf("Clientes actuales:\n");		
+		pthread_mutex_unlock(&mtx_lista);
+		hilos[i]=dato.hilo;
+		printf("------------------------------------------\n");
+		printf("Clientes actuales:\n");	
+		printf("------------------------------------------\n");	
 		recorrer_lista(&clientes,mostrar);	
 			
 	}
-	
+	for(i=0;i<MAX_THREADS;i++)
+	{
+		pthread_join(hilos[i],NULL);
+	}
 	pthread_join(hilo_peticiones,NULL);
-	//close(cliente_socket);
-	//close(servidor_socket);
-
+	close(servidor_socket);
 	return OK;
 }
 

@@ -37,7 +37,9 @@ int main(int argc, char *argv[]){
 		printf("Solicitud rechazada\n");
 		return ERROR;	
 	}
+	printf("------------------------------------------\n");
 	printf("CONEXION REALIZADA\n");
+	printf("------------------------------------------\n");
 	while(1)
 	{
 		bzero(buffer,256);
@@ -45,8 +47,12 @@ int main(int argc, char *argv[]){
 		printf("%s\n",buffer);
 		bzero(buffer,256);
 		scanf("%s",buffer);
-		send(x,(void*)buffer,strlen(buffer),0);	
+		send(x,(void*)buffer,strlen(buffer),0);
+		if (strcmp(buffer,"QUIT")==0)
+		{
+			printf("Se ha salido del servidor\n");
+			close(x);
+			return TODO_BIEN;
+		}	
 	}
-	//close(x);
-	return TODO_BIEN;
 }
