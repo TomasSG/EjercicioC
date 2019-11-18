@@ -5,7 +5,7 @@
 #define COLA_LLENA 0
 #define COLA_VACIA 0
 #define TODO_BIEN 1
-typedef int t_dato;
+typedef char* t_dato;
 typedef struct s_nodo
 {
     t_dato dato;
