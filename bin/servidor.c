@@ -11,19 +11,19 @@
 #include <signal.h>
 
 #include "../lib/lista.h"
+#include "../lib/lista_articulos.h"
 #include "../lib/cola.h"
 
 #define ERROR -1
 #define OK 1
 #define MAX_QUEUE 999
+#define PATH_ARCHIVO "../archivos/db.txt"
 
-
+t_lista_articulo articulos;
 t_lista clientes;
 t_cola peticiones;
 pid_t pid_server;
-int servidor_socket;
 t_dato matar;
-pthread_t hilo_peticiones;
 pthread_mutex_t mtx_cola = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_lista = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_matar = PTHREAD_MUTEX_INITIALIZER;
@@ -50,9 +50,6 @@ void matar_hilo (int signal)
 }
 void terminar (int signal)
 {
-	
-	pthread_join(hilo_peticiones,NULL);
-	close(servidor_socket);
 }
 
 void* escuchar_cliente(void* socket)
@@ -117,6 +114,8 @@ int main (int argc, char *argv[])
 	socklen_t cl=sizeof(struct sockaddr_in);
 	struct sockaddr_in sa;
 	struct sockaddr_in ca;
+	int servidor_socket;
+	pthread_t hilo_peticiones;
 	int habilitar = 1;
 	int resultado=0;
 	int i=0;
@@ -154,8 +153,17 @@ int main (int argc, char *argv[])
 	listen(servidor_socket,MAX_QUEUE);
 
 	pthread_create(&hilo_peticiones,NULL,atender_peticiones,NULL);
+
 	signal(SIGUSR1,matar_hilo); // comportamiento para que cuando un hilo finalice, se cierre el socket y se haga join al hilo
-	signal(SIGINT,terminar); // comportamiento para que cuando se haga ctrl + c en el servidor se cierren todos los socket, se maten los hilos y finalice el proceso
+	//signal(SIGINT,terminar); // comportamiento para que cuando se haga ctrl + c en el servidor se cierren todos los socket, se maten los hilos y finalice el proceso
+
+	crear_lista_articulo(&articulos);
+	if (cargar_lista_articulos_con_archivo(&articulos,PATH_ARCHIVO)!= TODO_BIEN)
+	{
+		return ERROR;
+	}
+	recorrer_lista_articulo(&articulos,mostrar_articulo);
+	
 	while(1)
 	{		
 		t_dato dato; 
@@ -170,6 +178,10 @@ int main (int argc, char *argv[])
 		printf("------------------------------------------\n");	
 			
 	}
+		
+	pthread_join(hilo_peticiones,NULL);
+	close(servidor_socket);
+	vaciar_lista_articulo(&articulos);
 	return OK;
 }
 
