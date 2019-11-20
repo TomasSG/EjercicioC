@@ -74,7 +74,6 @@ int cargar_lista_articulos_con_archivo(t_lista_articulo *pl,const char *path)
 {
 	t_dato_articulo registro;
 	char linea[200];
-	char aux [200];
 	int ini;
 	int fin;
 	FILE *fp;
@@ -94,35 +93,36 @@ int cargar_lista_articulos_con_archivo(t_lista_articulo *pl,const char *path)
 		{
 			fin++;
 		}
-		strncpy(aux,&linea[ini],fin);
-		registro.id=atoi(aux);
+		linea[fin]='\0';
+		registro.id=atoi(&linea[ini]);
+		//printf("%d\n",registro.id);
 		fin++;
 		ini=fin;
 		while( linea[fin] != ';' )
 		{
 			fin++;
 		}
-		strncpy(aux,&linea[ini],fin);
-		aux[fin-ini]='\0';
-		strcpy(registro.articulo,aux);
+		linea[fin]='\0';
+		strcpy(registro.articulo,&linea[ini]);
+		//printf("%s\n",registro.articulo);
 		fin++;
 		ini=fin;
 		while( linea[fin] != ';' )
 		{
 			fin++;
 		}
-		strncpy(aux,&linea[ini],fin);
-		aux[fin-ini]='\0';
-		strcpy(registro.producto,aux);
+		linea[fin]='\0';
+		strcpy(registro.producto,&linea[ini]);
+		//printf("%s\n",registro.producto);
 		fin++;
 		ini=fin;
-		while( linea[fin] != ';' && linea[fin] != '\0' )
+		while( linea[fin] != '\n' && linea[fin] != '\0' )
 		{
 			fin++;
 		}
-		strncpy(aux,&linea[ini],fin);
-		aux[fin-ini]='\0';
-		strcpy(registro.marca,aux);
+		linea[fin]='\0';
+		strcpy(registro.marca,&linea[ini]);
+		//printf("%s\n",registro.marca);
 		if ( insertar_ordenado_articulo(pl, &registro, comparacion_articulo) != TODO_BIEN)
 		{
 			printf("Error al poner en lista\n");
@@ -144,5 +144,5 @@ int comparacion_articulo(const t_dato_articulo *pd1,const t_dato_articulo *pd2)
 
 void mostrar_articulo(const t_dato_articulo *pd)
 {
-    printf("id: %d producto: %s marca: %s articulo: %s\n",pd->id,pd->producto,pd->marca,pd->articulo);
+    printf("id: %d\n producto: %s\n marca: %s\n articulo: %s\n",pd->id,pd->producto,pd->marca,pd->articulo);
 }

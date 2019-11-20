@@ -13,7 +13,7 @@ int main(int argc, char *argv[]){
 	int resultado = 0;
 	int x=0;
 	int i=0;
-	char buffer[256];
+	char buffer[1024];
 	struct sockaddr_in sa;
 
 	if(argc < 3){
@@ -42,10 +42,25 @@ int main(int argc, char *argv[]){
 	printf("------------------------------------------\n");
 	while(1)
 	{
-		bzero(buffer,256);
-		recv(x,buffer,256,0);
-		printf("%s\n",buffer);
-		bzero(buffer,256);
+		bzero(buffer,1024);
+		recv(x,buffer,1024,0);
+		if(strcmp(buffer,"INICIO")==0)
+		{
+			while(strcmp(buffer,"FIN")!=0)
+			{
+				bzero(buffer,1024);
+				recv(x,buffer,1024,0);
+				if(strcmp(buffer,"FIN")!=0)
+				{
+					printf("%s\n",buffer);
+				}			
+			}
+		} else
+		{
+			printf("%s\n",buffer);
+		} 
+		printf("---------------------\n");
+		bzero(buffer,1024);
 		scanf("%s",buffer);
 		send(x,(void*)buffer,strlen(buffer),0);
 		if (strcmp(buffer,"QUIT")==0)

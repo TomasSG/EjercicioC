@@ -12,7 +12,6 @@
 
 #include "../lib/lista.h"
 #include "../lib/lista_articulos.h"
-#include "../lib/cola.h"
 
 #define ERROR -1
 #define OK 1
@@ -21,10 +20,9 @@
 
 t_lista_articulo articulos;
 t_lista clientes;
-t_cola peticiones;
 pid_t pid_server;
 t_dato matar;
-pthread_mutex_t mtx_cola = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mtx_buffer = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_lista = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_matar = PTHREAD_MUTEX_INITIALIZER;
 
@@ -34,12 +32,18 @@ void terminar(int);
 void matar_hilo(int);
 void interpretar_mensaje(char*,char*,char*);
 void buscar_registro(char*,char*,int,const t_lista_articulo*);
+void ayuda();
+
+void ayuda()
+{
+	
+}
 
 void buscar_registro(char *clave,char *valor ,int socket,const t_lista_articulo *pl)
 {
 	t_nodo_articulo *aux= *pl, *aux1;
 	int id = atoi(valor), campo = -1,cantidad=0;;
-	char *mensaje;
+	char mensaje[1024];
 	if ( strcmp(clave,"ID")==0 )
 	{
 		campo=0;
@@ -58,65 +62,71 @@ void buscar_registro(char *clave,char *valor ,int socket,const t_lista_articulo 
 	}
 	if ( campo==-1)
 	{
-		mensaje="No se pudo realizar la búsqueda, el campo a filtrar es erroneo\n";
+		strcpy(mensaje,"No se pudo realizar la búsqueda, el campo a filtrar es erroneo\n");
 		send(socket,mensaje,strlen(mensaje),0);
 		return;
 	}
+	strcpy(mensaje,"INICIO");
+	send(socket,(void*)mensaje,strlen(mensaje),0);
 	while ( aux!=NULL)
 	{
 		if(campo==0 && id==aux->dato.id)
 		{
-			char *string;
-			sprintf(string,"%d",aux->dato.id);			
-			strcpy(mensaje,string);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.producto);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.marca);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.articulo);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			cantidad++;		
-		}
-		if(campo==1 && strcmp(valor,aux->dato.articulo))
-		{
-			char *string;
+			char string[200];
+			strcpy(mensaje,"\nID: ");			
 			sprintf(string,"%d",aux->dato.id);
-			strcpy(mensaje,string);
+			strcat(mensaje,string);			
+			strcat(mensaje,"\nPRODUCTO: ");
+			strcat(mensaje,aux->dato.producto);
+			strcat(mensaje,"\nMARCA: ");
+			strcat(mensaje,aux->dato.marca);
+			strcat(mensaje,"\nARTICULO: ");
+			strcat(mensaje,aux->dato.articulo);
 			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.producto);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.marca);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.articulo);
+			cantidad++;
+		}
+		if(campo==1 && strcmp(valor,aux->dato.articulo)==0)
+		{
+			char string[200];
+			strcpy(mensaje,"\nID: ");			
+			sprintf(string,"%d",aux->dato.id);
+			strcat(mensaje,string);			
+			strcat(mensaje,"\nPRODUCTO: ");
+			strcat(mensaje,aux->dato.producto);
+			strcat(mensaje,"\nMARCA: ");
+			strcat(mensaje,aux->dato.marca);
+			strcat(mensaje,"\nARTICULO: ");
+			strcat(mensaje,aux->dato.articulo);
 			send(socket,(void*)mensaje,strlen(mensaje),0);
 			cantidad++;		
 		}
-		if(campo==2 && strcmp(valor,aux->dato.producto))
+		if(campo==2 && strcmp(valor,aux->dato.producto)==0)
 		{
-			char *string;
-			sprintf(string,"%d",aux->dato.id);			
-			strcpy(mensaje,string);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.producto);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.marca);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.articulo);
+			char string[200];
+			strcpy(mensaje,"\nID: ");			
+			sprintf(string,"%d",aux->dato.id);
+			strcat(mensaje,string);			
+			strcat(mensaje,"\nPRODUCTO: ");
+			strcat(mensaje,aux->dato.producto);
+			strcat(mensaje,"\nMARCA: ");
+			strcat(mensaje,aux->dato.marca);
+			strcat(mensaje,"\nARTICULO: ");
+			strcat(mensaje,aux->dato.articulo);
 			send(socket,(void*)mensaje,strlen(mensaje),0);
 			cantidad++;		
 		}
-		if(campo==3 && strcmp(valor,aux->dato.marca))
+		if(campo==3 && strcmp(valor,aux->dato.marca)==0)
 		{
-			char *string;
-			sprintf(string,"%d",aux->dato.id);			
-			strcpy(mensaje,string);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.producto);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.marca);
-			send(socket,(void*)mensaje,strlen(mensaje),0);
-			strcpy(mensaje,aux->dato.articulo);
+			char string[200];
+			strcpy(mensaje,"\nID: ");			
+			sprintf(string,"%d",aux->dato.id);
+			strcat(mensaje,string);			
+			strcat(mensaje,"\nPRODUCTO: ");
+			strcat(mensaje,aux->dato.producto);
+			strcat(mensaje,"\nMARCA: ");
+			strcat(mensaje,aux->dato.marca);
+			strcat(mensaje,"\nARTICULO: ");
+			strcat(mensaje,aux->dato.articulo);
 			send(socket,(void*)mensaje,strlen(mensaje),0);
 			cantidad++;		
 		}
@@ -126,31 +136,31 @@ void buscar_registro(char *clave,char *valor ,int socket,const t_lista_articulo 
 	}
 	if(cantidad==0)
 	{
-		mensaje="No hubo coincidencias\n";
+		strcpy(mensaje,"No hubo coincidencias\n");
 		send(socket,(void*)mensaje,strlen(mensaje),0);
 	}
+	strcpy(mensaje,"FIN");
+	send(socket,(void*)mensaje,strlen(mensaje),0);
 	return;
 }	
 
 void interpretar_mensaje(char *mensaje, char *clave, char *valor)
 {
 	int ini=0,fin=0;
-	char aux[256];
 	while( mensaje[fin] != '=')
 	{
 		fin++;
 	}
-	strncpy(aux,&mensaje[ini],fin);
-	aux[fin-ini]='\0';
-	strcpy(clave,aux);
-	ini=++fin;
+	mensaje[fin]='\0';
+	strcpy(clave,&mensaje[ini]);
+	ini=fin+1;
 	while( mensaje[fin] != '\n' && mensaje[fin] != '\0' )
 	{
 		fin++;
 	}
-	strncpy(aux,&mensaje[ini],fin);
-	aux[fin-ini]='\0';
-	strcpy(valor,aux);
+	mensaje[fin]='\0';
+	strcpy(valor,&mensaje[ini]);
+	printf("%d\n",ini);
 }
 
 void matar_hilo (int signal)
@@ -177,14 +187,16 @@ void* escuchar_cliente(void *psocket)
 {
 	int* paux= (int*) psocket;	
 	int socket_cliente=*paux;
-	char buffer [256], clave[256], valor[256];
-	t_dato_c aux;
+	char buffer [1024], clave[1024], valor[1024];
 	char* enviar= "Escriba sus peticiones\n";
 	send(socket_cliente,(void*)enviar,strlen(enviar),0);
 	while(1)
 	{
-		bzero(buffer,256);
-		recv(socket_cliente,buffer,256,0);
+		bzero(buffer,1024);
+		bzero(clave,1024);
+		bzero(valor,1024);
+		recv(socket_cliente,buffer,1024,0);
+		pthread_mutex_lock(&mtx_buffer);	
 		if( strcmp(buffer,"QUIT")==0)
 		{
 			pthread_mutex_lock(&mtx_matar);			
@@ -195,42 +207,14 @@ void* escuchar_cliente(void *psocket)
 			pthread_exit(0);
 			return 0;
 		}
-		/*		
-		strcpy(aux.buffer, buffer);
-		aux.socket=socket_cliente;
-		pthread_mutex_lock(&mtx_cola);
-		if(!cola_llena(&peticiones))
-		{
-			acolar(&peticiones,&aux);
-		}
-		pthread_mutex_unlock(&mtx_cola);
-		*/
 		interpretar_mensaje(buffer,clave,valor);
 		printf("Clave: %s Valor: %s Socket: %d\n",clave,valor,socket_cliente);
 		buscar_registro(clave,valor,socket_cliente,&articulos);
+		pthread_mutex_unlock(&mtx_buffer);
 	}
 
 }
 
-void* atender_peticiones(void* nro)
-{
-	t_dato_c aux;
-	char clave[256], valor[256];	
-	while(1)
-	{
-		pthread_mutex_lock(&mtx_cola);	
-		if(!cola_vacia(&peticiones))
-		{
-			desacolar(&peticiones,&aux);
-			interpretar_mensaje(aux.buffer,clave,valor);
-			printf("Clave: %s Valor: %s Socket: %d\n",clave,valor,aux.socket);
-			buscar_registro(clave,valor,aux.socket,&articulos);
-						
-		}
-		pthread_mutex_unlock(&mtx_cola);
-	}
-	
-}
 
 int main (int argc, char *argv[])
 {
@@ -238,7 +222,6 @@ int main (int argc, char *argv[])
 	struct sockaddr_in sa;
 	struct sockaddr_in ca;
 	int servidor_socket;
-	pthread_t hilo_peticiones;
 	int habilitar = 1;
 	int resultado=0;
 	int i=0;
@@ -273,11 +256,7 @@ int main (int argc, char *argv[])
 	
 	crear_lista(&clientes);
 
-	crear_cola(&peticiones);
-
 	listen(servidor_socket,MAX_QUEUE);
-
-	pthread_create(&hilo_peticiones,NULL,atender_peticiones,NULL);
 
 	signal(SIGUSR1,matar_hilo); // comportamiento para que cuando un hilo finalice, se cierre el socket y se haga join al hilo
 	//signal(SIGINT,terminar); // comportamiento para que cuando se haga ctrl + c en el servidor se cierren todos los socket, se maten los hilos y finalice el proceso
@@ -287,7 +266,7 @@ int main (int argc, char *argv[])
 	{
 		return ERROR;
 	}
-	
+	//recorrer_lista_articulo(&articulos,mostrar_articulo);
 	while(1)
 	{		
 		t_dato dato; 
@@ -303,7 +282,6 @@ int main (int argc, char *argv[])
 			
 	}
 		
-	pthread_join(hilo_peticiones,NULL);
 	close(servidor_socket);
 	vaciar_lista_articulo(&articulos);
 	return OK;
