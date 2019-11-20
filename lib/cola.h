@@ -8,6 +8,7 @@
 typedef struct
 {
 	char buffer [256] ;
+	int socket;
 } t_dato_c;
 typedef struct s_nodo_c
 {

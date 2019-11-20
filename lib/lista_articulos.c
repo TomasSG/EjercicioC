@@ -1,4 +1,7 @@
 #include "lista_articulos.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void crear_lista_articulo(t_lista_articulo *pl)
 {
@@ -75,10 +78,11 @@ int cargar_lista_articulos_con_archivo(t_lista_articulo *pl,const char *path)
 	int ini;
 	int fin;
 	FILE *fp;
-	fp=fopen(path,"r");
+	fp=fopen(path,"rt");
 	if(!fp)
-	{
-		printf("Error al abrir la base de datos\n");
+	{	
+		printf("Error al abrir la base de datos :\n");
+		perror(path); //esto es para mostrar el error en caso de que no funcione		
 		return ERROR_ARCHIVO;
 	}
 	fgets(linea,200,fp);
@@ -140,5 +144,5 @@ int comparacion_articulo(const t_dato_articulo *pd1,const t_dato_articulo *pd2)
 
 void mostrar_articulo(const t_dato_articulo *pd)
 {
-    printf("id: %d producto: %s marca: %s articulo: %s",pd->id,pd->producto,pd->marca,pd->articulo);
+    printf("id: %d producto: %s marca: %s articulo: %s\n",pd->id,pd->producto,pd->marca,pd->articulo);
 }

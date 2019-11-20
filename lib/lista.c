@@ -79,5 +79,5 @@ int comparacion(const t_dato *pd1,const t_dato *pd2)
 
 void mostrar(const t_dato *pd)
 {
-    printf("El nro de cliente es: %d y el TID es: %ld\n",pd->socket,pd->hilo);
+    printf("El nro de socket es: %d y el TID es: %ld\n",pd->socket,pd->hilo);
 }

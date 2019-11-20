@@ -17,7 +17,7 @@
 #define ERROR -1
 #define OK 1
 #define MAX_QUEUE 999
-#define PATH_ARCHIVO "../archivos/db.txt"
+#define PATH_DB "./archivos/db"
 
 t_lista_articulo articulos;
 t_lista clientes;
@@ -32,6 +32,126 @@ void* escuchar_cliente(void*);
 void* atender_peticiones(void *);
 void terminar(int);
 void matar_hilo(int);
+void interpretar_mensaje(char*,char*,char*);
+void buscar_registro(char*,char*,int,const t_lista_articulo*);
+
+void buscar_registro(char *clave,char *valor ,int socket,const t_lista_articulo *pl)
+{
+	t_nodo_articulo *aux= *pl, *aux1;
+	int id = atoi(valor), campo = -1,cantidad=0;;
+	char *mensaje;
+	if ( strcmp(clave,"ID")==0 )
+	{
+		campo=0;
+	}
+	if ( strcmp(clave,"ARTICULO")==0 )
+	{
+		campo=1;
+	}
+	if ( strcmp(clave,"PRODUCTO")==0 )
+	{
+		campo=2;
+	}
+	if ( strcmp(clave,"MARCA")==0 )
+	{
+		campo=3;
+	}
+	if ( campo==-1)
+	{
+		mensaje="No se pudo realizar la búsqueda, el campo a filtrar es erroneo\n";
+		send(socket,mensaje,strlen(mensaje),0);
+		return;
+	}
+	while ( aux!=NULL)
+	{
+		if(campo==0 && id==aux->dato.id)
+		{
+			char *string;
+			sprintf(string,"%d",aux->dato.id);			
+			strcpy(mensaje,string);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.producto);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.marca);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.articulo);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			cantidad++;		
+		}
+		if(campo==1 && strcmp(valor,aux->dato.articulo))
+		{
+			char *string;
+			sprintf(string,"%d",aux->dato.id);
+			strcpy(mensaje,string);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.producto);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.marca);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.articulo);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			cantidad++;		
+		}
+		if(campo==2 && strcmp(valor,aux->dato.producto))
+		{
+			char *string;
+			sprintf(string,"%d",aux->dato.id);			
+			strcpy(mensaje,string);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.producto);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.marca);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.articulo);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			cantidad++;		
+		}
+		if(campo==3 && strcmp(valor,aux->dato.marca))
+		{
+			char *string;
+			sprintf(string,"%d",aux->dato.id);			
+			strcpy(mensaje,string);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.producto);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.marca);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			strcpy(mensaje,aux->dato.articulo);
+			send(socket,(void*)mensaje,strlen(mensaje),0);
+			cantidad++;		
+		}
+		aux1=aux;
+		aux=aux1->psig;
+		
+	}
+	if(cantidad==0)
+	{
+		mensaje="No hubo coincidencias\n";
+		send(socket,(void*)mensaje,strlen(mensaje),0);
+	}
+	return;
+}	
+
+void interpretar_mensaje(char *mensaje, char *clave, char *valor)
+{
+	int ini=0,fin=0;
+	char aux[256];
+	while( mensaje[fin] != '=')
+	{
+		fin++;
+	}
+	strncpy(aux,&mensaje[ini],fin);
+	aux[fin-ini]='\0';
+	strcpy(clave,aux);
+	ini=++fin;
+	while( mensaje[fin] != '\n' && mensaje[fin] != '\0' )
+	{
+		fin++;
+	}
+	strncpy(aux,&mensaje[ini],fin);
+	aux[fin-ini]='\0';
+	strcpy(valor,aux);
+}
 
 void matar_hilo (int signal)
 {
@@ -48,22 +168,22 @@ void matar_hilo (int signal)
 	pthread_mutex_unlock(&mtx_matar);
 	return;
 }
+
 void terminar (int signal)
 {
 }
 
-void* escuchar_cliente(void* socket)
+void* escuchar_cliente(void *psocket)
 {
-	int* paux= (int*) socket;	
+	int* paux= (int*) psocket;	
 	int socket_cliente=*paux;
-	char buffer [256];
+	char buffer [256], clave[256], valor[256];
 	t_dato_c aux;
-	char* enviar;
+	char* enviar= "Escriba sus peticiones\n";
+	send(socket_cliente,(void*)enviar,strlen(enviar),0);
 	while(1)
 	{
 		bzero(buffer,256);
-		enviar="Escriba su peticion\n";
-		send(socket_cliente,(void*)enviar,strlen(enviar),0);
 		recv(socket_cliente,buffer,256,0);
 		if( strcmp(buffer,"QUIT")==0)
 		{
@@ -75,34 +195,37 @@ void* escuchar_cliente(void* socket)
 			pthread_exit(0);
 			return 0;
 		}
+		/*		
 		strcpy(aux.buffer, buffer);
+		aux.socket=socket_cliente;
 		pthread_mutex_lock(&mtx_cola);
 		if(!cola_llena(&peticiones))
 		{
 			acolar(&peticiones,&aux);
 		}
 		pthread_mutex_unlock(&mtx_cola);
+		*/
+		interpretar_mensaje(buffer,clave,valor);
+		printf("Clave: %s Valor: %s Socket: %d\n",clave,valor,socket_cliente);
+		buscar_registro(clave,valor,socket_cliente,&articulos);
 	}
 
 }
 
-void* atender_peticiones(void* valor)
+void* atender_peticiones(void* nro)
 {
-	int i=0;
-	t_dato_c aux;	
-	pthread_mutex_lock(&mtx_cola);	
-	crear_cola(&peticiones);
-	pthread_mutex_unlock(&mtx_cola);
+	t_dato_c aux;
+	char clave[256], valor[256];	
 	while(1)
 	{
-		for(i=0;i < 100;i++)
-		{
-		}
 		pthread_mutex_lock(&mtx_cola);	
 		if(!cola_vacia(&peticiones))
 		{
 			desacolar(&peticiones,&aux);
-			printf("%s\n",aux.buffer);			
+			interpretar_mensaje(aux.buffer,clave,valor);
+			printf("Clave: %s Valor: %s Socket: %d\n",clave,valor,aux.socket);
+			buscar_registro(clave,valor,aux.socket,&articulos);
+						
 		}
 		pthread_mutex_unlock(&mtx_cola);
 	}
@@ -150,6 +273,8 @@ int main (int argc, char *argv[])
 	
 	crear_lista(&clientes);
 
+	crear_cola(&peticiones);
+
 	listen(servidor_socket,MAX_QUEUE);
 
 	pthread_create(&hilo_peticiones,NULL,atender_peticiones,NULL);
@@ -158,11 +283,10 @@ int main (int argc, char *argv[])
 	//signal(SIGINT,terminar); // comportamiento para que cuando se haga ctrl + c en el servidor se cierren todos los socket, se maten los hilos y finalice el proceso
 
 	crear_lista_articulo(&articulos);
-	if (cargar_lista_articulos_con_archivo(&articulos,PATH_ARCHIVO)!= TODO_BIEN)
+	if (cargar_lista_articulos_con_archivo(&articulos,PATH_DB) != TODO_BIEN)
 	{
 		return ERROR;
 	}
-	recorrer_lista_articulo(&articulos,mostrar_articulo);
 	
 	while(1)
 	{		
