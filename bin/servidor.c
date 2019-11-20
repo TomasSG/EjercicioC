@@ -55,8 +55,10 @@ void ayuda()
         printf("\tEjemplo de ejecución:\n\n");
         printf("Primero se debe ejecutar el servidor\n\n");
         printf("./server puerto_escucha \n\n");
+	printf("./server 5000 \n\n");
        	printf("Luego se ejecuta tantos clientes como se quiera\n\n");
-       	printf("./cliente IP_servidor puerto_servidor\n\n");		
+       	printf("./cliente IP_servidor puerto_servidor\n\n");
+	printf("./cliente 127.0.0.1 5000\n\n");			
 }
 
 void buscar_registro(char *clave,char *valor ,int socket,const t_lista_articulo *pl)
@@ -247,9 +249,14 @@ int main (int argc, char *argv[])
 	int i=0;
 	pid_server=getpid();
 	
-	if( argc < 2)
+	if( argc == 2 && (strcmp(argv[1],"-h") ==0 || strcmp(argv[1],"-help") ==0 ) )
 	{
-		printf("Debe ingresar el puerto de escucha!\n");
+		ayuda();
+		return 0;
+	}
+	if(argc < 2 || argc >= 3)	
+	{
+		printf("Cantidad de parámetros inválida\n");
 		return ERROR;	
 	}
 	
@@ -286,7 +293,6 @@ int main (int argc, char *argv[])
 	{
 		return ERROR;
 	}
-	//recorrer_lista_articulo(&articulos,mostrar_articulo);
 	while(1)
 	{		
 		t_dato dato; 
@@ -304,6 +310,7 @@ int main (int argc, char *argv[])
 		
 	close(servidor_socket);
 	vaciar_lista_articulo(&articulos);
+	vaciar_lista(&clientes);
 	return OK;
 }
 
